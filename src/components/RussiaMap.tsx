@@ -8,9 +8,12 @@ import {
   Film,
   Compass,
   MapPin,
+  Sparkles,
   HeartHandshake,
   ArrowUpRight,
   Layers,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 interface RussiaMapProps {
@@ -48,6 +51,29 @@ export function RussiaMap({
     () => theatres.find((t) => t.id === selectedId) || theatres[0],
     [theatres, selectedId]
   );
+
+  // Вычисляем окно из 3 карточек под картой вокруг текущего выбранного театра
+  const threeFeaturedCards = useMemo(() => {
+    if (theatres.length <= 3) return theatres;
+    const currentIndex = Math.max(
+      0,
+      theatres.findIndex((t) => t.id === selectedTheatre.id)
+    );
+    // Если выбран первый — показываем [0, 1, 2]; если последний — [N-3, N-2, N-1]; иначе [i-1, i, i+1]
+    let startIndex = currentIndex - 1;
+    if (startIndex < 0) startIndex = 0;
+    if (startIndex + 3 > theatres.length) {
+      startIndex = theatres.length - 3;
+    }
+    return theatres.slice(startIndex, startIndex + 3);
+  }, [theatres, selectedTheatre.id]);
+
+  function handleStepTheatre(direction: -1 | 1) {
+    const currentIndex = theatres.findIndex((t) => t.id === selectedTheatre.id);
+    const nextIndex =
+      (currentIndex + direction + theatres.length) % theatres.length;
+    onSelectTheatre(theatres[nextIndex].id);
+  }
 
   // Точки маршрута для номерных выпусков (соединяем пунктирной линией экспедиции)
   const numberedRoutePoints = useMemo(() => {
@@ -106,8 +132,8 @@ export function RussiaMap({
 
   return (
     <div className="relative">
-      {/* 1. ВЕРХНЯЯ ПАНЕЛЬ ФИЛЬТРОВ КАРТЫ */}
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-zinc-800/90 bg-zinc-950/90 p-3.5 backdrop-blur-md">
+      {/* Панель фильтров над картой */}
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-zinc-800/90 bg-zinc-950/90 p-3.5 backdrop-blur-md">
         <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1.5 px-2.5 text-xs font-medium uppercase tracking-wider text-zinc-400">
             <Layers className="h-3.5 w-3.5 text-white" />
@@ -118,7 +144,7 @@ export function RussiaMap({
             onClick={() => handleFilterChange("all")}
             className={`rounded-lg px-3 py-1.5 text-xs font-medium transition cursor-pointer ${
               filter === "all"
-                ? "bg-white text-zinc-950 font-bold"
+                ? "bg-white text-zinc-950 font-bold shadow-[0_0_15px_rgba(255,255,255,0.25)]"
                 : "bg-zinc-900 text-zinc-300 hover:bg-zinc-800"
             }`}
           >
@@ -129,7 +155,7 @@ export function RussiaMap({
             onClick={() => handleFilterChange("editing")}
             className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition cursor-pointer ${
               filter === "editing"
-                ? "bg-white text-zinc-950 font-bold"
+                ? "bg-white text-zinc-950 font-bold shadow-[0_0_15px_rgba(255,255,255,0.25)]"
                 : "bg-zinc-900 text-zinc-300 hover:bg-zinc-800"
             }`}
           >
@@ -162,6 +188,7 @@ export function RussiaMap({
           </button>
         </div>
 
+        {/* Легенда маршрута */}
         <div className="hidden xl:flex items-center gap-4 text-xs text-zinc-400 pr-2">
           <span className="inline-flex items-center gap-2">
             <span className="h-[2px] w-6 border-b border-dashed border-white/70" />
@@ -170,30 +197,28 @@ export function RussiaMap({
         </div>
       </div>
 
-      {/* 2. ОСНОВНОЙ РЯД С ЖЁСТКО ФИКСИРОВАННОЙ ВЫСОТОЙ НА ДЕСКТОПЕ (lg:h-[490px]) — НИКАКИХ СКАЧКОВ */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
-        {/* Левая колонка (8 из 12): Только карта России, заполняющая весь блок */}
-        <div className="relative flex flex-col justify-between overflow-hidden rounded-3xl border border-zinc-800 bg-[#09090b] p-4 sm:p-5 lg:col-span-8 lg:h-[490px] shadow-2xl">
-          <div className="pointer-events-none absolute -top-24 left-1/3 h-72 w-72 rounded-full bg-white/[0.05] blur-3xl" />
+      {/* Основная сетка: Карта России слева + Полная карточка выбранного театра справа */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 items-stretch">
+        {/* Левая колонка (8 из 12): Карта России + 3 крупные карточки под ней */}
+        <div className="relative flex flex-col justify-between overflow-hidden rounded-3xl border border-zinc-800 bg-[#09090b] p-4 sm:p-6 lg:col-span-8 shadow-2xl">
+          <div className="pointer-events-none absolute -top-28 left-1/3 h-80 w-80 rounded-full bg-white/[0.06] blur-3xl" />
 
-          {/* Короткая верхняя строка внутри карты */}
-          <div className="relative z-10 flex items-center justify-between gap-2">
+          {/* Верхний информационный бейдж на карте */}
+          <div className="relative z-10 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2 text-xs text-zinc-400">
-              <Compass className="h-4 w-4 shrink-0 text-white" />
-              <span className="truncate">
-                Кликайте по точкам городов на карте для смены театра
-              </span>
+              <Compass className="h-4 w-4 text-white" />
+              <span>Нажмите на любую точку города на карте, чтобы открыть обзор театра</span>
             </div>
-            <span className="hidden sm:inline-flex shrink-0 rounded-full border border-zinc-800 bg-zinc-900/90 px-3 py-1 text-[11px] font-medium text-zinc-200">
-              Выбрано: {selectedTheatre.city} ({selectedTheatre.name})
+            <span className="rounded-full border border-zinc-800 bg-zinc-900/90 px-3 py-1 text-[11px] font-medium text-zinc-200">
+              Выбрано: {selectedTheatre.city} — {selectedTheatre.name}
             </span>
           </div>
 
-          {/* Векторная карта России — строго по центру контейнера, overflow-hidden чтобы круги свечения не раздвигали блок */}
-          <div className="relative my-auto flex w-full flex-1 items-center justify-center overflow-hidden select-none">
+          {/* Векторная карта России (центрирована по вертикали, без лишних пустот) */}
+          <div className="relative my-auto w-full py-2 select-none overflow-hidden">
             <svg
-              viewBox="0 0 1000 445"
-              className="h-full w-full max-h-[415px] object-contain"
+              viewBox="0 0 1000 440"
+              className="w-full h-auto block"
               role="img"
               aria-label="Интерактивная карта независимых театров России"
             >
@@ -211,7 +236,7 @@ export function RussiaMap({
                 </radialGradient>
               </defs>
 
-              {/* Координатная сетка */}
+              {/* Координатная театральная сетка */}
               <g stroke="#27272a" strokeWidth="0.6" strokeDasharray="3 6" opacity="0.6">
                 <path d="M 40 115 Q 500 160 960 105" fill="none" />
                 <path d="M 40 215 Q 500 260 960 205" fill="none" />
@@ -223,7 +248,7 @@ export function RussiaMap({
                 <line x1="740" y1="25" x2="760" y2="435" />
               </g>
 
-              {/* Калининград */}
+              {/* Калининградский анклав */}
               <path
                 d="M 74 238 L 98 234 L 103 248 L 82 254 Z"
                 fill="url(#russiaMonoFill)"
@@ -231,7 +256,7 @@ export function RussiaMap({
                 strokeWidth="1.5"
               />
 
-              {/* Контур России */}
+              {/* Основной стилизованный контур России */}
               <path
                 d="
                   M 148 182
@@ -349,7 +374,7 @@ export function RussiaMap({
                 <text x="745" y="245">Дальний Восток</text>
               </g>
 
-              {/* Линия маршрута */}
+              {/* Линия маршрута экспедиции */}
               {routePathD && (
                 <path
                   d={routePathD}
@@ -361,7 +386,7 @@ export function RussiaMap({
                 />
               )}
 
-              {/* Белый луч софита на выбранный театр */}
+              {/* Белый луч театрального софита на выбранный театр */}
               {selectedTheatre && (() => {
                 const activeCoords = resolveTheatreCoords(
                   selectedTheatre.cityKey,
@@ -370,9 +395,9 @@ export function RussiaMap({
                 return (
                   <g className="pointer-events-none">
                     <polygon
-                      points={`${activeCoords.x - 60},0 ${activeCoords.x + 60},0 ${
-                        activeCoords.x + 24
-                      },${activeCoords.y} ${activeCoords.x - 24},${activeCoords.y}`}
+                      points={`${activeCoords.x - 65},0 ${activeCoords.x + 65},0 ${
+                        activeCoords.x + 26
+                      },${activeCoords.y} ${activeCoords.x - 26},${activeCoords.y}`}
                       fill="url(#whiteSpotlight)"
                       opacity="0.32"
                     />
@@ -386,7 +411,7 @@ export function RussiaMap({
                 );
               })()}
 
-              {/* Интерактивные точки театров */}
+              {/* Интерактивные точки театров на карте */}
               {filteredTheatres.map((theatre) => {
                 const coords = resolveTheatreCoords(
                   theatre.cityKey,
@@ -434,7 +459,7 @@ export function RussiaMap({
                     )}
 
                     <circle
-                      r={isSelected ? "11" : isHovered ? "9.5" : "8"}
+                      r={isSelected ? "12" : isHovered ? "10" : "8"}
                       fill={isSelected ? "#ffffff" : "#09090b"}
                       stroke={pinStroke}
                       strokeWidth={isSelected ? "3" : "2"}
@@ -457,7 +482,11 @@ export function RussiaMap({
                       />
                     )}
 
-                    <g transform="translate(0, -17)">
+                    <g
+                      transform={`translate(0, ${
+                        isSelected ? -20 : -15
+                      })`}
+                    >
                       <rect
                         x={-(theatre.city.length * 3.4 + 10)}
                         y="-12"
@@ -484,94 +513,199 @@ export function RussiaMap({
               })}
             </svg>
           </div>
+
+          {/* Нижний блок под картой: 3 просторные карточки с полным названием и описанием */}
+          <div className="mt-3 border-t border-zinc-800/90 pt-4">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
+                Текущий фокус и соседние точки маршрута
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleStepTheatre(-1)}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-300 transition hover:border-white hover:text-white cursor-pointer"
+                  aria-label="Предыдущий театр"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStepTheatre(1)}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-300 transition hover:border-white hover:text-white cursor-pointer"
+                  aria-label="Следующий театр"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              {threeFeaturedCards.map((item) => {
+                const active = item.id === selectedTheatre?.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => onSelectTheatre(item.id)}
+                    className={`group flex flex-col justify-between rounded-2xl border p-4 text-left transition cursor-pointer ${
+                      active
+                        ? "border-white bg-white text-zinc-950 shadow-[0_0_25px_rgba(255,255,255,0.18)]"
+                        : "border-zinc-800/90 bg-zinc-900/60 text-zinc-200 hover:border-zinc-600 hover:bg-zinc-900"
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span
+                          className={`text-xs font-bold uppercase tracking-wider ${
+                            active ? "text-zinc-900" : "text-zinc-400"
+                          }`}
+                        >
+                          {item.city}
+                        </span>
+                        <span
+                          className={`shrink-0 rounded px-2 py-0.5 text-[11px] font-extrabold ${
+                            active
+                              ? "bg-zinc-950 text-white"
+                              : item.episodeNumber
+                              ? "bg-zinc-800 text-white"
+                              : "bg-zinc-950 text-zinc-400 border border-zinc-800"
+                          }`}
+                        >
+                          {item.episodeNumber
+                            ? `Выпуск #${item.episodeNumber}`
+                            : "В маршруте"}
+                        </span>
+                      </div>
+
+                      <div
+                        className={`mt-2 font-display text-base font-bold leading-snug ${
+                          active ? "text-zinc-950" : "text-white"
+                        }`}
+                      >
+                        {item.name}
+                      </div>
+
+                      <p
+                        className={`mt-1 text-xs leading-relaxed ${
+                          active ? "text-zinc-700" : "text-zinc-400"
+                        }`}
+                      >
+                        {item.stageType}
+                      </p>
+                    </div>
+
+                    <div
+                      className={`mt-3 pt-2 border-t text-[11px] font-semibold flex items-center justify-between ${
+                        active
+                          ? "border-zinc-950/15 text-zinc-950"
+                          : "border-zinc-800/80 text-zinc-400 group-hover:text-white"
+                      }`}
+                    >
+                      <span>{item.video.releaseDate}</span>
+                      <span>{active ? "Выбрано •" : "Открыть →"}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
-        {/* Правая колонка (4 из 12): Карточка выбранного театра со СТРОГО СТАНДАРТИЗИРОВАННОЙ высотой блоков */}
+        {/* Правая колонка (4 из 12): ПОЛНАЯ КАРТОЧКА ТЕАТРА БЕЗ ОБРЕЗКИ ТЕКСТА */}
         {selectedTheatre && (
-          <div className="flex flex-col justify-between rounded-3xl border border-zinc-800 bg-[#09090b] p-6 lg:col-span-4 lg:h-[490px] shadow-2xl overflow-hidden">
+          <div className="flex flex-col justify-between rounded-3xl border border-zinc-800 bg-[#09090b] p-6 lg:col-span-4 shadow-2xl">
             <div>
-              {/* 1. Статус и номер выпуска (фиксированная высота строки) */}
-              <div className="flex h-7 items-center justify-between gap-2">
+              {/* Верхние бейджи статуса и выпуска */}
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <span
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium truncate ${
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${
                     statusMeta[selectedTheatre.video.status].badgeClass
                   }`}
                 >
                   <span
-                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                    className={`h-1.5 w-1.5 rounded-full ${
                       statusMeta[selectedTheatre.video.status].dotClass
                     }`}
                   />
-                  <span className="truncate">
-                    {statusMeta[selectedTheatre.video.status].label}
-                  </span>
+                  {statusMeta[selectedTheatre.video.status].label}
                 </span>
 
-                <span className="shrink-0 rounded-md bg-white px-2.5 py-1 text-xs font-black uppercase tracking-wider text-zinc-950">
-                  {selectedTheatre.episodeNumber
-                    ? `Выпуск #${selectedTheatre.episodeNumber}`
-                    : "База"}
-                </span>
+                {selectedTheatre.episodeNumber ? (
+                  <span className="rounded-md bg-white px-2.5 py-1 text-xs font-black uppercase tracking-wider text-zinc-950">
+                    Выпуск #{selectedTheatre.episodeNumber}
+                  </span>
+                ) : (
+                  <span className="rounded-md border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs font-semibold text-zinc-300">
+                    В очереди съёмок
+                  </span>
+                )}
               </div>
 
-              {/* 2. Город, Название и Тип площадки (фиксированное число строк без скачков) */}
+              {/* Город и Название театра */}
               <div className="mt-4">
-                <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-zinc-400 truncate">
-                  <MapPin className="h-3.5 w-3.5 shrink-0 text-white" />
-                  <span className="truncate">
-                    {selectedTheatre.city} • С {selectedTheatre.foundedYear} г.
-                    {selectedTheatre.seatsCount
-                      ? ` • ~${selectedTheatre.seatsCount} мест`
-                      : ""}
-                  </span>
+                <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-widest text-zinc-300">
+                  <MapPin className="h-3.5 w-3.5 text-white" />
+                  {selectedTheatre.city} • Основан в {selectedTheatre.foundedYear} г.
+                  {selectedTheatre.seatsCount
+                    ? ` • Зал ~${selectedTheatre.seatsCount} мест`
+                    : ""}
                 </div>
-                <h3
-                  className="mt-1.5 font-display text-2xl font-bold leading-tight text-white line-clamp-1"
-                  title={selectedTheatre.name}
-                >
+                <h3 className="mt-1.5 font-display text-3xl font-bold leading-snug text-white">
                   {selectedTheatre.name}
                 </h3>
-                <p className="mt-1 text-xs text-zinc-400 line-clamp-1">
+                <p className="mt-1 text-xs text-zinc-400">
                   {selectedTheatre.stageType}
                 </p>
               </div>
 
-              {/* 3. Короткое описание театра (строго 3 строки = 60px) */}
-              <p className="mt-3.5 h-[60px] text-xs sm:text-sm leading-5 text-zinc-300 line-clamp-3">
+              {/* Полное описание театра */}
+              <p className="mt-4 text-sm leading-relaxed text-zinc-300">
                 {selectedTheatre.shortPitch}
               </p>
 
-              {/* 4. Стандартизированный блок видеообзора (строго 132px) */}
-              <div className="mt-4 h-[132px] rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3.5 flex flex-col justify-between overflow-hidden">
-                <div>
-                  <div className="flex items-center justify-between gap-2 text-[11px] text-zinc-400">
-                    <span className="inline-flex items-center gap-1.5 font-semibold text-white truncate">
-                      <Film className="h-3.5 w-3.5 shrink-0 text-white" />
-                      Обзор «Театра нет»
-                    </span>
-                    <span className="shrink-0 truncate">
-                      {selectedTheatre.video.releaseDate}
-                    </span>
-                  </div>
-                  <p className="mt-1.5 text-xs font-bold leading-snug text-white line-clamp-2">
-                    {selectedTheatre.video.title}
-                  </p>
+              {/* Превью-блок видеообзора (полный текст и цитата ведущего) */}
+              <div className="mt-5 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
+                <div className="flex items-center justify-between text-xs text-zinc-400">
+                  <span className="inline-flex items-center gap-1.5 font-medium text-white">
+                    <Film className="h-3.5 w-3.5 text-white" />
+                    Видеообзор проекта «Театра нет»
+                  </span>
+                  <span>{selectedTheatre.video.releaseDate}</span>
                 </div>
-
-                <p className="text-[11px] italic leading-4 text-zinc-300 border-l-2 border-white/60 pl-2.5 line-clamp-2">
+                <p className="mt-2 text-sm font-semibold text-white">
+                  {selectedTheatre.video.title}
+                </p>
+                <p className="mt-2 text-xs italic leading-relaxed text-zinc-300 border-l-2 border-white/60 pl-3">
                   {selectedTheatre.video.hostNote}
                 </p>
               </div>
+
+              {/* Блок актуальной нужды театра для спонсоров и зрителей */}
+              {selectedTheatre.needs.length > 0 && (
+                <div className="mt-4 rounded-2xl border border-zinc-700/80 bg-zinc-900/40 p-3.5">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-white">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Как поддержать этот театр сейчас:
+                  </div>
+                  <p className="mt-1 text-xs font-medium text-zinc-200">
+                    {selectedTheatre.needs[0].title}
+                  </p>
+                  <p className="mt-0.5 text-[11px] leading-relaxed text-zinc-400">
+                    {selectedTheatre.needs[0].description}
+                  </p>
+                </div>
+              )}
             </div>
 
-            {/* 5. Кнопки действий (всегда прижаты к низу на одном уровне) */}
-            <div className="mt-4 flex flex-col gap-2">
+            {/* Кнопки действий */}
+            <div className="mt-6 flex flex-col gap-2.5">
               <button
                 type="button"
                 onClick={() => onWatchEpisode(selectedTheatre)}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs sm:text-sm font-bold text-zinc-950 transition hover:bg-zinc-200 cursor-pointer whitespace-nowrap"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-bold text-zinc-950 shadow-[0_0_25px_rgba(255,255,255,0.2)] transition hover:bg-zinc-200 cursor-pointer"
               >
-                <Play className="h-4 w-4 fill-current shrink-0" />
+                <Play className="h-4 w-4 fill-current" />
                 {selectedTheatre.video.status === "released"
                   ? "Смотреть выпуск прямо на сайте"
                   : selectedTheatre.video.status === "editing"
@@ -579,18 +713,18 @@ export function RussiaMap({
                   : "Смотреть анонс и карточку выпуска"}
               </button>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2.5">
                 <button
                   type="button"
                   onClick={onScrollToDetails}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs font-semibold text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-800 cursor-pointer whitespace-nowrap"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2.5 text-xs font-semibold text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-800 cursor-pointer"
                 >
                   Досье театра
                   <ArrowUpRight className="h-3.5 w-3.5 text-zinc-400" />
                 </button>
                 <a
                   href="#bridge"
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/20 whitespace-nowrap"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/30 bg-white/10 px-3 py-2.5 text-xs font-semibold text-white transition hover:bg-white/20"
                 >
                   <HeartHandshake className="h-3.5 w-3.5" />
                   Помочь театру
@@ -599,59 +733,6 @@ export function RussiaMap({
             </div>
           </div>
         )}
-      </div>
-
-      {/* 3. НИЖНЯЯ ПАНЕЛЬ ВСЕХ ТОЧЕК — ВЫНЕСЕНА В ЕДИНЫЙ РОВНЫЙ РЯД ПОД КАРТОЙ И ПРАВЫМ БЛОКОМ (НЕ ЗАВИСИТ ОТ ТЕКСТА СПРАВА) */}
-      <div className="mt-4 rounded-2xl border border-zinc-800/90 bg-[#09090b] p-3.5">
-        <div className="mb-2.5 flex items-center justify-between text-[11px] font-medium uppercase tracking-wider text-zinc-400 px-1">
-          <span>Быстрое переключение по точкам на карте ({theatres.length})</span>
-          <span className="hidden sm:inline">Все карточки фиксированного размера</span>
-        </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
-          {theatres.map((item) => {
-            const active = item.id === selectedTheatre?.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onSelectTheatre(item.id)}
-                className={`group flex h-[64px] flex-col justify-between rounded-xl border p-2.5 text-left transition cursor-pointer ${
-                  active
-                    ? "border-white bg-white text-zinc-950 shadow-[0_0_20px_rgba(255,255,255,0.18)]"
-                    : "border-zinc-800/90 bg-zinc-900/60 text-zinc-300 hover:border-zinc-600 hover:bg-zinc-900"
-                }`}
-              >
-                <div className="flex items-center justify-between gap-1 w-full">
-                  <span
-                    className={`text-[11px] font-extrabold uppercase tracking-wide truncate ${
-                      active ? "text-zinc-950" : "text-white"
-                    }`}
-                  >
-                    {item.city}
-                  </span>
-                  <span
-                    className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold ${
-                      active
-                        ? "bg-zinc-950 text-white"
-                        : item.episodeNumber
-                        ? "bg-zinc-800 text-zinc-200"
-                        : "bg-zinc-950 text-zinc-400"
-                    }`}
-                  >
-                    {item.episodeNumber ? `#${item.episodeNumber}` : "•"}
-                  </span>
-                </div>
-                <div
-                  className={`text-[11px] leading-tight truncate w-full ${
-                    active ? "text-zinc-800 font-semibold" : "text-zinc-400"
-                  }`}
-                >
-                  {item.name}
-                </div>
-              </button>
-            );
-          })}
-        </div>
       </div>
     </div>
   );
