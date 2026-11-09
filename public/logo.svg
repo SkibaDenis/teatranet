@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 56" fill="none">
+  <rect x="2" y="6" width="44" height="44" rx="8" fill="#09090B" stroke="#FFFFFF" stroke-width="2"/>
+  <circle cx="24" cy="28" r="9" fill="#FFFFFF" fill-opacity="0.18"/>
+  <path d="M13 39L35 17" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
+  <text x="58" y="35" fill="#FFFFFF" font-family="serif" font-weight="700" font-size="24" letter-spacing="2">ТЕАТРА</text>
+  <rect x="172" y="13" width="76" height="30" rx="4" fill="#FFFFFF"/>
+  <text x="184" y="34" fill="#09090B" font-family="sans-serif" font-weight="900" font-size="20" letter-spacing="2">НЕТ</text>
+</svg>

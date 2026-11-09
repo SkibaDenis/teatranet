@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+:root {
+  /*
+   * Единые дизайн-токены проекта «ТЕАТРА НЕТ» (Чёрно-белая монохромная эстетика).
+   * Меняйте шрифты и цвета здесь или в src/config/brand.config.ts
+   */
+  --bg-stage: #070708;
+  --text-primary: #ffffff;
+  --accent-spotlight: #ffffff;
+  --accent-muted: #a1a1aa;
+}
+
+html {
+  scroll-behavior: smooth;
+  background-color: var(--bg-stage);
+  color: var(--text-primary);
+}
+
+body {
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  background-color: var(--bg-stage);
+  color: var(--text-primary);
+  overflow-x: hidden;
+}
+
+/* Единая унифицированная типографика по всему сайту без разнобоя шрифтов */
+.font-display {
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.02em;
+}
