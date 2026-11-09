@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { TheatreEpisode } from "@/types/theatre";
 import {
   Play,
@@ -16,6 +16,7 @@ import {
   Wrench,
   Building2,
   CheckCircle2,
+  Film,
 } from "lucide-react";
 
 interface EpisodeShowcaseProps {
@@ -31,6 +32,12 @@ export function EpisodeShowcase({
     theatre.video.youtubeId ? "youtube" : "teaser"
   );
   const [isPlayingEmbed, setIsPlayingEmbed] = useState(false);
+
+  // Сбрасываем состояние плеера при переключении театра на карте
+  useEffect(() => {
+    setIsPlayingEmbed(false);
+    setPlayerSource(theatre.video.youtubeId ? "youtube" : "teaser");
+  }, [theatre.id, theatre.video.youtubeId]);
 
   const needCategoryBadge = {
     equipment: {
@@ -73,7 +80,7 @@ export function EpisodeShowcase({
       <div className="flex flex-col justify-between gap-4 border-b border-zinc-800 pb-6 lg:flex-row lg:items-end">
         <div>
           <div className="inline-flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-widest text-zinc-300">
-            <span className="rounded bg-white px-2 py-0.5 font-black text-zinc-950">
+            <span className="rounded bg-white px-2.5 py-0.5 font-black text-zinc-950">
               {theatre.episodeNumber
                 ? `Выпуск #${theatre.episodeNumber}`
                 : "Досье театра"}
@@ -144,36 +151,37 @@ export function EpisodeShowcase({
       <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-12">
         {/* Левая часть (7 колонок): Встроенный видеоплеер и заметки ведущего */}
         <div className="lg:col-span-7 flex flex-col gap-6">
-          <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-zinc-800 bg-black shadow-2xl">
+          <div className="relative w-full overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl">
             {playerSource === "youtube" && cleanYoutubeId && isPlayingEmbed ? (
-              <iframe
-                className="h-full w-full"
-                src={`https://www.youtube.com/embed/${cleanYoutubeId}?autoplay=1&rel=0`}
-                title={theatre.video.title}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
+              <div className="aspect-video w-full">
+                <iframe
+                  className="h-full w-full"
+                  src={`https://www.youtube.com/embed/${cleanYoutubeId}?autoplay=1&rel=0`}
+                  title={theatre.video.title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
             ) : playerSource === "vk" && theatre.video.vkEmbedUrl && isPlayingEmbed ? (
-              <iframe
-                className="h-full w-full"
-                src={theatre.video.vkEmbedUrl}
-                title={theatre.video.title}
-                allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-                allowFullScreen
-              />
+              <div className="aspect-video w-full">
+                <iframe
+                  className="h-full w-full"
+                  src={theatre.video.vkEmbedUrl}
+                  title={theatre.video.title}
+                  allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
             ) : (
-              /* Заставка плеера в чёрно-белой эстетике «Одного театра» */
-              <div className="relative flex h-full w-full flex-col justify-between bg-gradient-to-br from-zinc-950 via-[#0e0e11] to-zinc-900 p-6 sm:p-8">
-                {/* Белый свет софита на фоне заставки */}
-                <div className="pointer-events-none absolute -top-20 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-white/10 blur-3xl" />
+              /* Информационная заставка плеера в чёрно-белой эстетике (без пустых зон) */
+              <div className="relative flex flex-col justify-between bg-gradient-to-br from-zinc-950 via-[#111115] to-zinc-900 p-6 sm:p-8 min-h-[340px]">
+                <div className="pointer-events-none absolute -top-20 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-white/[0.07] blur-3xl" />
 
                 <div className="relative z-10 flex flex-wrap items-center justify-between gap-2">
                   <span className="inline-flex items-center gap-2 rounded-full border border-zinc-700 bg-zinc-900/90 px-3 py-1 text-xs font-medium text-zinc-200">
                     <span
-                      className={`h-2 w-2 rounded-full ${
-                        theatre.video.status === "editing"
-                          ? "bg-white animate-ping"
-                          : "bg-white"
+                      className={`h-2 w-2 rounded-full bg-white ${
+                        theatre.video.status === "editing" ? "animate-ping" : ""
                       }`}
                     />
                     {theatre.video.releaseDate}
@@ -185,12 +193,12 @@ export function EpisodeShowcase({
                       ? "YouTube"
                       : playerSource === "vk"
                       ? "VK Видео"
-                      : "Анонс"}
+                      : "Анонс выпуска"}
                   </span>
                 </div>
 
-                {/* Центральная кнопка Play */}
-                <div className="relative z-10 my-auto flex flex-col items-center text-center max-w-xl mx-auto">
+                {/* Центральный блок с кнопкой запуска и содержанием выпуска */}
+                <div className="relative z-10 my-6 flex flex-col items-center text-center max-w-xl mx-auto">
                   {playerSource === "vk" && !theatre.video.vkEmbedUrl ? (
                     <div className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-5 text-center">
                       <p className="text-sm font-semibold text-white">
@@ -203,31 +211,57 @@ export function EpisodeShowcase({
                     </div>
                   ) : (
                     <>
-                      <button
-                        type="button"
-                        onClick={() => setIsPlayingEmbed(true)}
-                        className="group relative flex h-20 w-20 items-center justify-center rounded-full bg-white text-zinc-950 shadow-[0_0_40px_rgba(255,255,255,0.35)] transition duration-300 hover:scale-105 hover:bg-zinc-200 cursor-pointer"
-                        aria-label="Запустить видеообзор"
-                      >
-                        <Play className="h-8 w-8 fill-current ml-1" />
-                      </button>
+                      {cleanYoutubeId ? (
+                        <button
+                          type="button"
+                          onClick={() => setIsPlayingEmbed(true)}
+                          className="group relative flex h-16 w-16 items-center justify-center rounded-full bg-white text-zinc-950 shadow-[0_0_35px_rgba(255,255,255,0.3)] transition duration-300 hover:scale-105 hover:bg-zinc-200 cursor-pointer"
+                          aria-label="Запустить видеообзор"
+                        >
+                          <Play className="h-7 w-7 fill-current ml-0.5" />
+                        </button>
+                      ) : (
+                        <div className="flex h-14 w-14 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-white">
+                          <Film className="h-6 w-6" />
+                        </div>
+                      )}
+
                       <h3 className="mt-4 font-display text-lg sm:text-xl font-bold text-white">
                         {theatre.video.title}
                       </h3>
-                      <p className="mt-1.5 text-xs sm:text-sm text-zinc-400 line-clamp-2">
+                      <p className="mt-2 text-xs sm:text-sm text-zinc-300 leading-relaxed">
                         {theatre.video.logline}
                       </p>
                     </>
                   )}
                 </div>
 
-                <div className="relative z-10 flex items-center justify-between text-[11px] text-zinc-400 border-t border-zinc-800/80 pt-3">
-                  <span>Проект «ТЕАТРА НЕТ» • Документальный обзор</span>
-                  {theatre.video.status === "editing" && (
-                    <span className="text-white font-semibold">
-                      Статус: Монтаж 1-го выпуска («Один театр», Краснодар)
-                    </span>
-                  )}
+                {/* Краткие эпизоды / темы внутри выпуска */}
+                <div className="relative z-10 grid grid-cols-1 gap-2 sm:grid-cols-3 border-t border-zinc-800/90 pt-4 text-left">
+                  <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/70 p-2.5">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                      Часть 01 • Сцена
+                    </div>
+                    <div className="mt-0.5 text-xs font-medium text-zinc-200">
+                      Закулисье {theatre.name} и устройство зала
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/70 p-2.5">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                      Часть 02 • Люди
+                    </div>
+                    <div className="mt-0.5 text-xs font-medium text-zinc-200">
+                      Разговор с труппой и художественным руководством
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/70 p-2.5">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                      Часть 03 • Экономика
+                    </div>
+                    <div className="mt-0.5 text-xs font-medium text-zinc-200">
+                      Как коммерческий театр живёт и развивается
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -365,7 +399,7 @@ export function EpisodeShowcase({
             </div>
           </div>
 
-          {/* Блок «Чем помочь этому театру» — мост со спонсоров и зрителями */}
+          {/* Блок «Чем помочь этому театру» — мост со спонсорами и зрителями */}
           <div className="rounded-2xl border border-white/25 bg-gradient-to-b from-white/[0.06] via-zinc-900/80 to-zinc-950 p-6">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white">
               <Sparkles className="h-4 w-4" />
